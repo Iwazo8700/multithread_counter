@@ -89,3 +89,4 @@ int main() {
     printf("%d\n", resultado);//imporime o resultado final
     return 0;
 }
+
