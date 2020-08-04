@@ -21,7 +21,7 @@ typedef struct{
     } thread_args;
 
 /*Variaveis Globais*/
-pthread_mutex_t trava;//mutex
+//pthread_mutex_t trava;//mutex
 int resultado = 0;//variavel para o resultado final
 pthread_t workers[WORKER];//threads
 int worker_status[WORKER];//status das threads(ativo ou inativo)
@@ -47,12 +47,10 @@ void* worker(void *arg){
     pego a parametro, dou o typecast pra thread_args e calculo o primo do valor N do thread_args*/
     
     thread_args *work = (thread_args*)(arg);
-    resultado+=primo(work->N);
-    pthread_mutex_lock(&trava);
+    resultado+=primo(work->N); //somo 1 no resultado final se o numero for primo, 0 caso contrario
     n_workers--;
-    worker_status[work->ID] = INATIVO;
-    free(work);
-    pthread_mutex_unlock(&trava);
+    worker_status[work->ID] = INATIVO; //libero a thread q acabou de trabalhar
+    free(work);//libero o espaco alocado pro parametro arg
     return NULL;
     }
 
@@ -66,29 +64,28 @@ int main() {
     int ordem = 0;
     while(scanf("%d%c", &numero, &c)){
         
-        if(n_workers >= WORKER) pthread_join(workers[ordem%4], NULL);
-        pthread_mutex_lock(&trava);
+        if(n_workers >= WORKER){ 
+            pthread_join(workers[ordem%4], NULL);//se o numero de thread trabalhando for igual ao numero de threads max, entao espero uma das threads terminarem de trabalhar
+            worker_status[ordem%4] = INATIVO; //seto desativo na thread q acabou de trabalhar
+        }
         send_args = (thread_args*)malloc(sizeof(thread_args));
-        send_args->N = numero;
+        send_args->N = numero; //crio os argumentos
 
         j = 0;
-        while(worker_status[j] == ATIVO) j++;
+        while(worker_status[j] == ATIVO) j++;//descobrir qual worker nao esta trabalhando
         send_args->ID = j;
-        worker_status[j] = ATIVO;
-        n_workers++;
-        pthread_create(&(workers[j]), NULL, worker, (void*)send_args);
-        pthread_mutex_unlock(&trava);
-        
-        
-        
+        worker_status[j] = ATIVO; //seto a thread j como trabalhando
+        n_workers++; //add mais um pro total de threads ativas
+        pthread_create(&(workers[j]), NULL, worker, (void*)send_args); //crio a thread
+
+
         ordem++;
-        if(c=='\n') break;
+        if(c=='\n') break;//se deu quebra de linha encerra o programa
     }
 
     for(int i=0; i<WORKER; i++){
-        pthread_join(workers[i], NULL);
+        pthread_join(workers[i], NULL);//encerra todas as threads ativas
     }
-
-    printf("%d\n", resultado);
+    printf("%d\n", resultado);//imporime o resultado final
     return 0;
 }
